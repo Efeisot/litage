@@ -4,7 +4,7 @@ pkgver=0.2.0
 pkgrel=1
 pkgdesc="Lenovo Vantage alternative for Linux — distro & init agnostic (Yoga/IdeaPad/Legion/ThinkPad)"
 arch=('any')
-url="https://github.com/example/litage"
+url="https://github.com/efeisot/litage"
 license=('GPL3')
 depends=('python' 'python-gobject' 'python-yaml' 'gtk4' 'libadwaita')
 optdepends=('upower: battery details'
@@ -14,7 +14,7 @@ optdepends=('upower: battery details'
             'libayatana-appindicator: tray menu on Cinnamon')
 provides=('litage')
 conflicts=('litage')
-source=('git+file:///home/efeisot/Workspace/ltport/Litage')
+source=('git+https://github.com/efeisot/litage.git')
 sha256sums=('SKIP')
 
 package() {
