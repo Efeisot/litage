@@ -81,11 +81,13 @@ esac
 echo "== installing python package to $PREFIX/lib/litage"
 sudo mkdir -p "$PREFIX/lib/litage" "$PREFIX/bin" /etc/litage/profiles
 sudo cp -r "$HERE/litage" "$PREFIX/lib/litage/"
-printf '#!/bin/sh\nexec env PYTHONPATH=%s python3 -m litage.cli "$@"\n' "$PREFIX/lib" | sudo tee "$PREFIX/bin/litage" >/dev/null
-printf '#!/bin/sh\nexec env PYTHONPATH=%s python3 -m litage.gui "$@"\n' "$PREFIX/lib" | sudo tee "$PREFIX/bin/litage-gui" >/dev/null
-printf '#!/bin/sh\nexec env PYTHONPATH=%s python3 -m litage.daemon "$@"\n' "$PREFIX/lib" | sudo tee "$PREFIX/bin/litaged" >/dev/null
-printf '#!/bin/sh\nexec env PYTHONPATH=%s python3 -m litage.tray "$@"\n' "$PREFIX/lib" | sudo tee "$PREFIX/bin/litage-tray" >/dev/null
-echo "export PYTHONPATH=$PREFIX/lib:\$PYTHONPATH" | sudo tee /etc/profile.d/litage.sh >/dev/null || true
+# NOT: paket $PREFIX/lib/litage/litage/ altina kopyalanir, o yuzden
+# PYTHONPATH paketin bir ustu ($PREFIX/lib/litage) olmalidir.
+printf '#!/bin/sh\nexec env PYTHONPATH=%s/litage python3 -m litage.cli "$@"\n' "$PREFIX" | sudo tee "$PREFIX/bin/litage" >/dev/null
+printf '#!/bin/sh\nexec env PYTHONPATH=%s/litage python3 -m litage.gui "$@"\n' "$PREFIX" | sudo tee "$PREFIX/bin/litage-gui" >/dev/null
+printf '#!/bin/sh\nexec env PYTHONPATH=%s/litage python3 -m litage.daemon "$@"\n' "$PREFIX" | sudo tee "$PREFIX/bin/litaged" >/dev/null
+printf '#!/bin/sh\nexec env PYTHONPATH=%s/litage python3 -m litage.tray "$@"\n' "$PREFIX" | sudo tee "$PREFIX/bin/litage-tray" >/dev/null
+echo "export PYTHONPATH=$PREFIX/lib/litage:\$PYTHONPATH" | sudo tee /etc/profile.d/litage.sh >/dev/null || true
 sudo chmod +x "$PREFIX/bin/litage" "$PREFIX/bin/litage-gui" "$PREFIX/bin/litaged" "$PREFIX/bin/litage-tray"
 
 [ -f /etc/litage/litaged.conf ] || sudo cp "$HERE/daemon/litaged.conf" /etc/litage/litaged.conf
