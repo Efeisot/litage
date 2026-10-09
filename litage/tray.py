@@ -67,8 +67,9 @@ def gui_command() -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from litage.i18n import t
     if already_running():
-        print("litage-tray zaten çalışıyor")
+        print(t("t.already"))
         return 0
     import gi
     gi.require_version("Gtk", "3.0")
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         gi.require_version("AyatanaAppIndicator3", "0.1")
         from gi.repository import AyatanaAppIndicator3 as AI  # noqa: E402
     except (ImportError, ValueError) as e:
-        print(f"tepsi kullanılamıyor (Ayatana yok): {e}", file=sys.stderr)
+        print(t("t.no_ayatana", e=e), file=sys.stderr)
         return 1
 
     from litage import capabilities as capmod  # noqa: E402
@@ -108,9 +109,9 @@ def main(argv: list[str] | None = None) -> int:
             import glob as _g
             for hw in _g.glob("/sys/class/hwmon/hwmon*"):
                 if _u.read_str(f"{hw}/name") == "k10temp":
-                    t = _u.read_str(f"{hw}/temp1_input")
-                    if t:
-                        parts.append(f"{float(t) / 1000:.0f}°C")
+                    tv = _u.read_str(f"{hw}/temp1_input")
+                    if tv:
+                        parts.append(f"{float(tv) / 1000:.0f}°C")
                     break
             b = _u.read_str("/sys/class/power_supply/BAT0/capacity")
             s = _u.read_str("/sys/class/power_supply/BAT0/status")
@@ -151,10 +152,10 @@ def main(argv: list[str] | None = None) -> int:
     first = None
     for prof in (pp.get("choices") or ["low-power", "balanced", "performance"]):
         if first is None:
-            mi = Gtk.RadioMenuItem(label=f"Güç: {prof}")
+            mi = Gtk.RadioMenuItem(label=t("t.power", prof=prof))
             first = mi
         else:
-            mi = Gtk.RadioMenuItem(label=f"Güç: {prof}", group=first)
+            mi = Gtk.RadioMenuItem(label=t("t.power", prof=prof), group=first)
 
         def _set(_m, prof=prof):
             if not ready["v"]:  # kurulumdaki set_active tetiklemesin
@@ -171,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     if cap.has_ideapad:
         menu.append(Gtk.SeparatorMenuItem())
         ide = ideapad.get_all(cap)
-        mi_cons = Gtk.CheckMenuItem(label="Pil koruma")
+        mi_cons = Gtk.CheckMenuItem(label=t("t.conservation"))
         mi_cons.set_active(ide.get("conservation") == "1")
 
         def _cons(m):
@@ -184,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         menu.append(mi_cons)
 
     menu.append(Gtk.SeparatorMenuItem())
-    mi_open = Gtk.MenuItem(label="Pencereyi aç")
+    mi_open = Gtk.MenuItem(label=t("t.open"))
 
     def _open(_m):
         cmd = gui_command()
@@ -193,11 +194,11 @@ def main(argv: list[str] | None = None) -> int:
                              stderr=subprocess.DEVNULL,
                              start_new_session=True)
         else:
-            print("GUI bulunamadı", file=sys.stderr)
+            print(t("t.no_gui"), file=sys.stderr)
 
     mi_open.connect("activate", _open)
     menu.append(mi_open)
-    mi_quit = Gtk.MenuItem(label="Çık")
+    mi_quit = Gtk.MenuItem(label=t("t.quit"))
 
     def _quit(_m):
         remove_lock()
@@ -207,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     menu.append(mi_quit)
     menu.show_all()
     ind.set_menu(menu)
-    print("litage-tray çalışıyor (tepsi)")
+    print(t("t.running"))
     try:
         Gtk.main()
     finally:

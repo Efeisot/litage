@@ -99,3 +99,22 @@ def test_prefs_close_action_roundtrip():
 def test_icons_pkg():
     from litage import icons_pkg as _i
     assert _i.ensure_user_icons() == "dev.litage.app"
+
+
+def test_i18n_parity():
+    from litage import i18n as _i
+    problems = _i.check_parity()
+    assert not problems, problems[:5]
+    assert _i.t("no.such.key") == "no.such.key"
+    # format hatası güvenli düşmeli
+    assert isinstance(_i.t("d.battery_line", cap=80), str)
+
+
+def test_no_t_shadow():
+    # `t` i18n fonksiyonunu gölgeleyen yerel atama olmamalı (UnboundLocalError verir)
+    import re
+    for path in ("litage/gui.py", "litage/tray.py"):
+        src = open(path, encoding="utf-8").read()
+        bad = [ln for ln in src.splitlines()
+               if re.search(r"(^|[^_.a-zA-Z])t\s*=(?!=)", ln)]
+        assert not bad, f"{path}: {bad[:3]}"

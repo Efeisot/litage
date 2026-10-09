@@ -85,7 +85,8 @@ def run_many(pairs: list[tuple[str, str]], timeout: int = 90) -> tuple[bool, str
     """
     cmd = cli_command()
     if cmd is None:
-        return False, "CLI bulunamadı — önce ./install.sh çalıştırın (veya AppImage kullanın)"
+        from litage.i18n import t
+        return False, t("p.cli_missing")
     args = [f"{f}={v}" for f, v in pairs]
     # 1) şifresiz deneme (hızlı)
     try:
@@ -105,18 +106,23 @@ def run_many(pairs: list[tuple[str, str]], timeout: int = 90) -> tuple[bool, str
             capture_output=True, text=True, timeout=timeout,
         )
     except FileNotFoundError:
-        return False, "pkexec yok — polkit kurulu değil"
+        from litage.i18n import t
+        return False, t("p.no_pkexec")
     except subprocess.TimeoutExpired:
-        return False, "zaman aşımı (şifre diyaloğu açılmadı mı?)"
+        from litage.i18n import t
+        return False, t("p.timeout")
     except OSError as e:
-        return False, f"çalıştırma hatası: {e}"
+        from litage.i18n import t
+        return False, t("p.exec_err", e=e)
     out = (p.stdout.strip() or p.stderr.strip() or "ok")
     if p.returncode == 127:
-        return False, "yetkilendirme aracısı yok — polkit agent kurun (Sistem sayfası)"
+        from litage.i18n import t
+        return False, t("p.no_agent")
     if p.returncode != 0:
         # polkit iptal / auth hatası vs.
         if "dismissed" in out or "canceled" in out or not out:
-            return False, "iptal edildi"
+            from litage.i18n import t
+            return False, t("p.canceled")
         return False, out
     return True, out
 

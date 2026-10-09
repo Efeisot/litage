@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
     from litage import capabilities as capmod  # noqa: E402
+    from litage.i18n import t  # noqa: E402
     from litage import privileged as priv  # noqa: E402
     from litage import themes as theme_mod  # noqa: E402
     from litage.backends import (  # noqa: E402
@@ -150,9 +151,9 @@ def main(argv: list[str] | None = None) -> int:
             d = Gdk.Display.get_default()
             if d is not None:
                 d.get_clipboard().set(text)
-                toast("kopyalandı")
+                toast(t("c.toast_copied"))
         except Exception as e:
-            toast(f"kopyalanamadı: {e}")
+            toast(t("c.toast_copy_fail", e=e))
 
     # ---------------- ayrıcalıklı yazma (toplu: tek şifre) ----------------
     # Kontroller değişikliği beklemeye alır (ui["pending"]), Kaydet çubuğu
@@ -174,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     def stage(feature: str, value: str):
         ui_state["pending"][feature] = value
         savebar_update()
-        toast(f"bekliyor: {feature}={value} (Kaydet'e bas)")
+        toast(t("c.staged", item=f"{feature}={value}"))
 
     def save_discard():
         ui_state["pending"].clear()
@@ -227,9 +228,9 @@ def main(argv: list[str] | None = None) -> int:
         GLib.idle_add(lambda: batch_ready.update(ready=True) or False)
         hint = terminal_hint or f"sudo litage set {feature} on|off"
         attach_menu(sr, [
-            ("Değeri kopyala", lambda: copy_text(f"{feature}={'on' if sr.get_active() else 'off'}")),
-            ("Terminalde uygula", lambda: copy_text(hint)),
-            ("Yenile", lambda: refresh_current()),
+            (t("c.ctx_copy_value"), lambda: copy_text(f"{feature}={'on' if sr.get_active() else 'off'}")),
+            (t("c.ctx_apply_term"), lambda: copy_text(hint)),
+            (t("c.ctx_refresh"), lambda: refresh_current()),
         ])
         return sr
 
@@ -256,8 +257,8 @@ def main(argv: list[str] | None = None) -> int:
         # hazır bayrağını event-loop sonrasına bırak ki init set_selected işlemesin
         GLib.idle_add(lambda: state_flag.update(ready=True) or False)
         attach_menu(cr, [
-            ("Değeri kopyala", lambda: copy_text(f"{feature}={options[cr.get_selected()]}" if options else "")),
-            ("Yenile", lambda: refresh_current()),
+            (t("c.ctx_copy_value"), lambda: copy_text(f"{feature}={options[cr.get_selected()]}" if options else "")),
+            (t("c.ctx_refresh"), lambda: refresh_current()),
         ])
         return cr
 
@@ -293,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
         box.append(sub)
         box.add_css_class("card")
         attach_menu(box, [
-            ("Değeri kopyala", lambda: copy_text(f"{label}: {value}")),
+            (t("c.ctx_copy_value"), lambda: copy_text(f"{label}: {value}")),
         ])
         return box
 
@@ -365,7 +366,7 @@ def main(argv: list[str] | None = None) -> int:
                 cr.set_font_size(10)
                 cr.set_source_rgba(0.6, 0.6, 0.6, 1)
                 cr.move_to(pad_l, pad_t + 20)
-                cr.show_text("veri toplanıyor…")
+                cr.show_text(t("d.collecting"))
                 return
             lo, hi = min(self._samples), max(self._samples)
             if hi - lo < 1e-6:
@@ -494,7 +495,8 @@ def main(argv: list[str] | None = None) -> int:
         plab.add_css_class("title-4")
         pbox.append(plab)
         blab = Gtk.Label(
-            label=f"Pil %{bat0.get('capacity', '?')} · {bat0.get('status', '')}",
+            label=t("d.battery_line", cap=bat0.get('capacity', '?'),
+                    st=bat0.get('status', '')),
             xalign=1)
         blab.add_css_class("dim-label")
         pbox.append(blab)
@@ -510,10 +512,10 @@ def main(argv: list[str] | None = None) -> int:
         shown = 0
         for hw in sorted(_g.glob("/sys/class/hwmon/hwmon*")):
             name = _u.read_str(f"{hw}/name") or "?"
-            t = _u.read_str(f"{hw}/temp1_input")
-            if t and shown < 4:
+            tv = _u.read_str(f"{hw}/temp1_input")
+            if tv and shown < 4:
                 try:
-                    c = float(t) / 1000
+                    c = float(tv) / 1000
                 except ValueError:
                     continue
                 cls, frac = temp_class(c)
@@ -522,27 +524,27 @@ def main(argv: list[str] | None = None) -> int:
                 shown += 1
         if cpu.get("cpu_mhz_avg"):
             flow.prepend(sensor_card(ICONS["cpu"], f"{cpu['cpu_mhz_avg']} MHz", "CPU"))
-        grp_s = Adw.PreferencesGroup(title="Sensörler")
+        grp_s = Adw.PreferencesGroup(title=t("d.sensors"))
         grp_s.add(flow)
         box.append(grp_s)
 
         # grafikler (canlı çizgi grafikler — YAN YANA)
-        grp_g = Adw.PreferencesGroup(title="Grafikler",
-                                     description="canlı · 2 sn aralık · sağ tık menüsü var")
+        grp_g = Adw.PreferencesGroup(title=t("d.graphs"),
+                                     description=t("d.graphs_desc"))
         chbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8,
                         homogeneous=True)
-        ch_cpu = HistoryChart("CPU sıcaklığı", "°C", (0.30, 0.77, 0.54))
-        ch_gpu = HistoryChart("GPU sıcaklığı", "°C", (0.47, 0.68, 0.93))
-        ch_mhz = HistoryChart("CPU frekansı", " MHz", (0.95, 0.65, 0.20))
+        ch_cpu = HistoryChart(t("d.cpu_temp"), "°C", (0.30, 0.77, 0.54))
+        ch_gpu = HistoryChart(t("d.gpu_temp"), "°C", (0.47, 0.68, 0.93))
+        ch_mhz = HistoryChart(t("d.cpu_freq"), " MHz", (0.95, 0.65, 0.20))
         for _ch in (ch_cpu, ch_gpu, ch_mhz):
-            attach_menu(_ch, [("Yenile", lambda: refresh_current())])
+            attach_menu(_ch, [(t("c.ctx_refresh"), lambda: refresh_current())])
             chbox.append(_ch)
         grp_g.add(chbox)
         ui["charts"] = {"cpu": ch_cpu, "gpu": ch_gpu, "mhz": ch_mhz}
         box.append(grp_g)
 
         # güç grubu — segmentli güç modu (LLT PowerModeControl tarzı)
-        grp = Adw.PreferencesGroup(title="Güç", description="Fn+Q ile aynı profil")
+        grp = Adw.PreferencesGroup(title=t("d.power"), description=t("d.power_desc"))
         pp = platform_profile.get(cap)
         choices = pp.get("choices") or ["low-power", "balanced", "performance"]
         if pp.get("choices") or cap.platform_profiles:
@@ -572,59 +574,63 @@ def main(argv: list[str] | None = None) -> int:
             except (ValueError, IndexError):
                 pass
             GLib.idle_add(lambda: seg_ready.update(ready=True) or False)
-            r = Adw.ActionRow(title="Güç modu", subtitle="Fn+Q ile aynı profil")
+            r = Adw.ActionRow(title=t("d.power_mode"), subtitle=t("d.power_desc"))
             r.add_prefix(Gtk.Image.new_from_icon_name(ICONS["power"]))
             r.add_suffix(segbox)
             grp.add(r)
             for prov, p in pp.get("providers", {}).items():
-                rr = Adw.ActionRow(title=f"sağlayıcı: {p.get('driver')}",
+                rr = Adw.ActionRow(title=t("d.provider", driver=p.get('driver')),
                                    subtitle=f"{p.get('profile')}")
                 rr.add_prefix(Gtk.Image.new_from_icon_name(ICONS["power"]))
                 grp.add(rr)
         if cpu.get("governors"):
-            grp.add(combo_row("CPU governor", cpu.get("governor"), cpu["governors"],
-                              "governor", icon=ICONS["cpu"]))
+            grp.add(combo_row(t("d.governor"), cpu.get("governor"), cpu["governors"],
+                              "governor", subtitle=t("d.governor_sub"),
+                              icon=ICONS["cpu"]))
         if cpu.get("epp_available"):
-            grp.add(combo_row("Enerji tercihi (EPP)", cpu.get("epp"),
-                              cpu["epp_available"], "epp", icon=ICONS["power"]))
+            grp.add(combo_row(t("d.epp"), cpu.get("epp"),
+                              cpu["epp_available"], "epp", subtitle=t("d.epp_sub"),
+                              icon=ICONS["power"]))
         if cpu.get("boost") is not None:
-            grp.add(switch_row("CPU Boost", cpu.get("boost") == "1", "boost",
-                               icon=ICONS["power"]))
+            grp.add(switch_row(t("d.boost"), cpu.get("boost") == "1", "boost",
+                               subtitle=t("d.boost_sub"), icon=ICONS["power"]))
         box.append(grp)
 
         # Lenovo grubu
         if cap.has_ideapad:
             ide = ideapad.get_all(cap)
-            g = Adw.PreferencesGroup(title="Lenovo")
-            g.add(switch_row("Pil koruma", ide.get("conservation") == "1",
-                             "conservation", "Şarjı %60/%80'de sınırla",
+            g = Adw.PreferencesGroup(title=t("d.lenovo"))
+            g.add(switch_row(t("d.conservation"), ide.get("conservation") == "1",
+                             "conservation", t("d.conservation_sub"),
                              icon=ICONS["battery"]))
-            g.add(switch_row("Fn-Lock", ide.get("fn_lock") == "1", "fn_lock",
-                             "Fn tuş kilidi", icon=ICONS["keyboard"]))
-            g.add(switch_row("Kamera", ide.get("camera_power") == "1", "camera_power",
-                             icon=ICONS["camera"]))
-            g.add(switch_row("Kapalıyken USB şarj", ide.get("usb_charging") == "1",
-                             "usb_charging", icon=ICONS["power"]))
-            g.add(combo_row("Fan modu", str(ide.get("fan_mode")), ["0", "1", "2"],
-                            "fan_mode", icon=ICONS["fan"]))
+            g.add(switch_row(t("d.fnlock"), ide.get("fn_lock") == "1", "fn_lock",
+                             t("d.fnlock_sub"), icon=ICONS["keyboard"]))
+            g.add(switch_row(t("d.camera"), ide.get("camera_power") == "1", "camera_power",
+                             subtitle=t("d.camera_sub"), icon=ICONS["camera"]))
+            g.add(switch_row(t("d.usb"), ide.get("usb_charging") == "1",
+                             "usb_charging", subtitle=t("d.usb_sub"),
+                             icon=ICONS["power"]))
+            g.add(combo_row(t("d.fanmode"), str(ide.get("fan_mode")), ["0", "1", "2"],
+                            "fan_mode", subtitle=t("d.fanmode_sub"),
+                            icon=ICONS["fan"]))
             maxb = cap.kbd_backlight_max or 2
-            g.add(combo_row("Klavye ışığı", str(ide.get("kbd_backlight")),
+            g.add(combo_row(t("d.kbd"), str(ide.get("kbd_backlight")),
                             [str(i) for i in range(maxb + 1)], "kbd_backlight",
-                            icon=ICONS["keyboard"]))
+                            subtitle=t("d.kbd_sub"), icon=ICONS["keyboard"]))
             box.append(g)
 
         # TLP grubu
         if cap.has_tlp:
-            g = Adw.PreferencesGroup(title="TLP",
-                                     description="Tek opsiyonel bağımlılık")
+            g = Adw.PreferencesGroup(title=t("d.tlp"),
+                                     description=t("d.tlp_desc"))
             sys_info = tlp.system_info()
-            g.add(row("TLP profili",
+            g.add(row(t("d.tlp_profile"),
                       Gtk.Label(label=f"{sys_info.get('tlp_profile', '?')} / "
                                       f"{sys_info.get('power_source', '?')}"),
                       icon=ICONS["power"]))
             bat = tlp.battery_info()
             if bat.get("threshold_start") is not None:
-                g.add(row("Şarj eşiği",
+                g.add(row(t("d.tlp_threshold"),
                           Gtk.Label(label=f"{bat['threshold_start']}–{bat.get('threshold_end')}%"),
                           icon=ICONS["battery"]))
             box.append(g)
@@ -632,11 +638,11 @@ def main(argv: list[str] | None = None) -> int:
         # kablosuz
         rf = rfkill.get()
         if rf.get("devices"):
-            g = Adw.PreferencesGroup(title="Bağlantı")
+            g = Adw.PreferencesGroup(title=t("d.conn"))
             if cap.has_wifi_rfkill:
-                g.add(switch_row("Wi-Fi", True, "wifi", icon=ICONS["network"]))
+                g.add(switch_row(t("d.wifi"), True, "wifi", icon=ICONS["network"]))
             if cap.has_bt_rfkill:
-                g.add(switch_row("Bluetooth", True, "bluetooth", icon=ICONS["bt"]))
+                g.add(switch_row(t("d.bt"), True, "bluetooth", icon=ICONS["bt"]))
             box.append(g)
         return page_scroll(box)
 
@@ -674,22 +680,22 @@ def main(argv: list[str] | None = None) -> int:
         header.set_halign(Gtk.Align.CENTER)
         outer.append(header)
 
-        grp = Adw.PreferencesGroup(title="İstatistik")
+        grp = Adw.PreferencesGroup(title=t("b.stats"))
         labels = {
-            "status": ("Durum", None), "capacity": ("Kapasite (%)", None),
-            "capacity_level": ("Seviye", None),
-            "charge_type_active": ("Şarj tipi", ICONS["power"]),
-            "charge_types_raw": ("Tipler", None), "cycle_count": ("Çevrim", None),
-            "energy_full": ("Dolu (µWh)", None),
-            "energy_full_design": ("Tasarım (µWh)", None),
-            "energy_now": ("Anlık (µWh)", None), "power_now": ("Güç (µW)", None),
-            "voltage_now": ("Voltaj (µV)", None), "technology": ("Teknoloji", None),
-            "manufacturer": ("Üretici", None), "model_name": ("Model", None),
+            "status": (t("b.status"), None), "capacity": (t("b.capacity"), None),
+            "capacity_level": (t("b.level"), None),
+            "charge_type_active": (t("b.ctype"), ICONS["power"]),
+            "charge_types_raw": (t("b.ctypes"), None), "cycle_count": (t("b.cycle"), None),
+            "energy_full": (t("b.full"), None),
+            "energy_full_design": (t("b.design"), None),
+            "energy_now": (t("b.now"), None), "power_now": (t("b.power"), None),
+            "voltage_now": (t("b.voltage"), None), "technology": (t("b.tech"), None),
+            "manufacturer": (t("b.vendor"), None), "model_name": (t("b.model"), None),
         }
         for k, (label, ic) in labels.items():
             if bat.get(k) is not None:
                 r = row(label, Gtk.Label(label=str(bat[k])), icon=ic)
-                attach_menu(r, [("Değeri kopyala",
+                attach_menu(r, [(t("c.ctx_copy_value"),
                                  lambda v=str(bat[k]): copy_text(v))])
                 grp.add(r)
         up = bat.get("upower", {})
@@ -702,21 +708,21 @@ def main(argv: list[str] | None = None) -> int:
             full = float(bat.get("energy_full") or 0)
             design = float(bat.get("energy_full_design") or 0)
             if full > 0 and design > 0:
-                grp.add(row("Pil sağlığı",
+                grp.add(row(t("b.health"),
                             Gtk.Label(label=f"%{full / design * 100:.1f}"),
-                            subtitle="dolu / tasarım",
+                            subtitle=t("b.health_sub"),
                             icon=ICONS["battery"]))
         except (ValueError, TypeError):
             pass
         outer.append(grp)
         if cap.has_tlp:
-            g2 = Adw.PreferencesGroup(title="TLP şarj eşiği")
+            g2 = Adw.PreferencesGroup(title=t("b.tlp_group"))
             info = tlp.battery_info()
             for line in (info.get("lines") or [])[:8]:
                 g2.add(Adw.ActionRow(title=line))
-            hint = Adw.ActionRow(title="Eşik değiştir (polkit)",
-                                 subtitle="Örn: 20–80 için tıklayıp şifrenizi girin")
-            btn = Gtk.Button(label="Uygula: 20–80")
+            hint = Adw.ActionRow(title=t("b.tlp_change"),
+                                 subtitle=t("b.tlp_hint"))
+            btn = Gtk.Button(label=t("b.tlp_apply"))
             btn.connect("clicked", lambda _b: privileged_set("tlp_charge", "20 80"))
             hint.add_suffix(btn)
             g2.add(hint)
@@ -728,7 +734,7 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_top(12)
         outer.set_margin_start(12)
         outer.set_margin_end(12)
-        grp = Adw.PreferencesGroup(title="Klavye", description="ideapad VPC")
+        grp = Adw.PreferencesGroup(title=t("k.title"), description=t("k.desc"))
         if cap.has_ideapad:
             from litage import cli as _cli
             auto_now = (_cli.get_daemon_kbd_auto() or "off").lower() in ("true", "on", "1")
@@ -740,9 +746,9 @@ def main(argv: list[str] | None = None) -> int:
                 als_lux, has_als = None, False
             if has_als:
                 grp.add(switch_row(
-                    "Otomatik parlaklık", auto_now, "kbd_auto",
-                    f"ortam ışığına göre 0/1/2 (şu an: "
-                    f"{als_lux:.0f} lux)" if als_lux is not None else "ALS bulundu",
+                    t("k.auto"), auto_now, "kbd_auto",
+                    t("k.auto_sub", lux=f"{als_lux:.0f}") if als_lux is not None
+                    else t("k.auto_sub_nolux"),
                     icon=ICONS["keyboard"]))
             ide = ideapad.get_all(cap)
             maxb = cap.kbd_backlight_max or 2
@@ -766,7 +772,7 @@ def main(argv: list[str] | None = None) -> int:
                     if ((_cli2.get_daemon_kbd_auto() or "off").lower()
                             in ("true", "on", "1")):
                         stage("kbd_auto", "off")
-                        toast("oto kapatıldı (manuel ayar)")
+                        toast(t("k.auto_off"))
                 except Exception:
                     pass
                 state["t"] = None
@@ -778,15 +784,15 @@ def main(argv: list[str] | None = None) -> int:
                 state["t"] = GLib.timeout_add(600, _apply)
 
             scale.connect("value-changed", _chg)
-            lab = Adw.ActionRow(title="Arka ışık",
-                                subtitle="kaydır, bırakınca beklemeye alınır — Kaydet'e bas")
+            lab = Adw.ActionRow(title=t("k.backlight"),
+                                subtitle=t("k.backlight_sub"))
             lab.add_prefix(Gtk.Image.new_from_icon_name(ICONS["keyboard"]))
             grp.add(lab)
             grp.add(scale)
-            grp.add(switch_row("Fn-Lock", ide.get("fn_lock") == "1", "fn_lock",
-                               "Fn tuş kilidi (polkit ile)", icon=ICONS["keyboard"]))
+            grp.add(switch_row(t("k.fnlock"), ide.get("fn_lock") == "1", "fn_lock",
+                               t("k.fnlock_sub"), icon=ICONS["keyboard"]))
         else:
-            grp.add(locked_row("Klavye", "ideapad VPC yok", ICONS["keyboard"]))
+            grp.add(locked_row(t("k.no_vpc"), t("k.no_vpc_sub"), ICONS["keyboard"]))
         outer.append(grp)
         return page_scroll(outer)
 
@@ -797,21 +803,21 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_start(12)
         outer.set_margin_end(12)
         fc = legion.fancurve_summary() if cap.has_legion_module else {"present": False}
-        grp = Adw.PreferencesGroup(title="Fan Eğrisi",
-                                   description="10 nokta · sıcaklık → hız")
+        grp = Adw.PreferencesGroup(title=t("f.title"),
+                                   description=t("f.desc"))
         if not fc.get("present"):
-            grp.add(locked_row("Fan eğrisi düzenleyici",
-                               "bu cihazda EC fan eğrisi yok — Legion/LOQ'da açılır",
+            grp.add(locked_row(t("f.locked"),
+                               t("f.locked_reason"),
                                ICONS["fan"]))
             info = Adw.ActionRow(
-                title="Neden kapalı?",
-                subtitle="Yoga/IdeaPad'de fan eğrisi firmware'de sabit. "
-                         "Sadece fan modu (sessiz/normal) değiştirilebilir.")
+                title=t("f.why"),
+                subtitle=t("f.why_sub"))
             grp.add(info)
             if cap.has_ideapad:
                 ide = ideapad.get_all(cap)
-                grp.add(combo_row("Fan modu (bu cihazda çalışan)", str(ide.get("fan_mode")),
-                                  ["0", "1", "2"], "fan_mode", icon=ICONS["fan"]))
+                grp.add(combo_row(t("f.mode_working"), str(ide.get("fan_mode")),
+                                  ["0", "1", "2"], "fan_mode",
+                                  subtitle=t("d.fanmode_sub"), icon=ICONS["fan"]))
         else:
             area = Gtk.DrawingArea()
             area.set_content_height(220)
@@ -829,11 +835,11 @@ def main(argv: list[str] | None = None) -> int:
                     cr.stroke()
                 cr.set_source_rgba(0.7, 0.7, 0.7, 1)
                 cr.move_to(pad_l, 15)
-                cr.show_text("sıcaklık (°C) → hız")
+                cr.show_text(t("f.axis"))
                 pts = fc.get("points", [])
                 if not pts:
                     cr.move_to(pad_l, pad_t + 24)
-                    cr.show_text("nokta yok")
+                    cr.show_text(t("f.no_points"))
                     return
                 xs = [float(p.get("pwm1_auto_point%d_temp" % p["id"], 40)) for p in pts]
                 ys = [float(str(p.get("pwm1_auto_point%d_pwm" % p["id"], 0))) for p in pts]
@@ -868,11 +874,11 @@ def main(argv: list[str] | None = None) -> int:
                 cr.move_to(4, h - 8)
                 cr.show_text(f"{x0:.0f}°")
                 cr.move_to(4, pad_t + 4)
-                cr.show_text("max")
+                cr.show_text(t("f.max"))
 
             area.set_draw_func(_draw)
             grp.add(area)
-            grp.add(row("Hız birimi", Gtk.Label(label=str(fc.get("speed_unit"))),
+            grp.add(row(t("f.unit"), Gtk.Label(label=str(fc.get("speed_unit"))),
                         icon=ICONS["fan"]))
         outer.append(grp)
         return page_scroll(outer)
@@ -882,16 +888,15 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_top(12)
         outer.set_margin_start(12)
         outer.set_margin_end(12)
-        grp = Adw.PreferencesGroup(title="Legion",
-                                   description="LLL uyumlu · legion_laptop modülü")
+        grp = Adw.PreferencesGroup(title=t("l.title"),
+                                   description=t("l.desc"))
         if not cap.has_legion_module:
-            grp.add(locked_row("Legion kontrolleri",
-                               "modül yüklü değil — Legion/LOQ'da açılır",
+            grp.add(locked_row(t("l.locked"),
+                               t("l.locked_reason"),
                                ICONS["legion"]))
             grp.add(Adw.ActionRow(
-                title="Bilgi",
-                subtitle="GameZone WMI + legion-laptop modülü yok. "
-                         "Destekli Legion'da güç limitleri ve fan burada olur."))
+                title=t("l.info"),
+                subtitle=t("l.info_sub")))
         else:
             lg = legion.get_all()
             for feat, val in lg.get("bools", {}).items():
@@ -908,7 +913,7 @@ def main(argv: list[str] | None = None) -> int:
                     privileged_set(feat, str(int(_s.get_value())))
 
                 sp.connect("value-changed", _ap)
-                grp.add(row(f"{feat} (W)", sp, icon=ICONS["legion"]))
+                grp.add(row(t("l.watt", feat=feat), sp, icon=ICONS["legion"]))
         outer.append(grp)
         return page_scroll(outer)
 
@@ -917,14 +922,14 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_top(12)
         outer.set_margin_start(12)
         outer.set_margin_end(12)
-        grp = Adw.PreferencesGroup(title="Harici GPU")
+        grp = Adw.PreferencesGroup(title=t("g.title"))
         if not cap.show_dgpu_page:
-            grp.add(locked_row("dGPU kontrolleri",
-                               "NVIDIA yok (iGPU-only cihaz) — dGPU'lu modelde açılır",
+            grp.add(locked_row(t("g.locked"),
+                               t("g.locked_reason"),
                                ICONS["dgpu"]))
         else:
             nv = optional.nvidia_get(cap)
-            grp.add(row("Durum", Gtk.Label(label=str(nv.get("smi", "NVIDIA mevcut"))),
+            grp.add(row(t("g.status"), Gtk.Label(label=str(nv.get("smi", t("g.present")))),
                         icon=ICONS["dgpu"]))
         outer.append(grp)
         return page_scroll(outer)
@@ -935,23 +940,23 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_top(12)
         outer.set_margin_start(12)
         outer.set_margin_end(12)
-        grp = Adw.PreferencesGroup(title="litaged presetleri",
-                                   description="/etc/litage/profiles/*.yaml — AC/pil × profil")
+        grp = Adw.PreferencesGroup(title=t("a.presets"),
+                                   description=t("a.presets_desc"))
         profs = sorted(_g.glob("/etc/litage/profiles/*.yaml") or _g.glob("daemon/profiles/*.yaml"))
         if not profs:
-            grp.add(row("Preset", Gtk.Label(label="bulunamadı (henüz kurulmadı)")))
+            grp.add(row(t("a.preset"), Gtk.Label(label=t("a.not_found"))))
         for p in profs:
             name = os.path.basename(p)
-            r = row(name, Gtk.Label(label="hazır"), subtitle=p, icon=ICONS["automation"])
+            r = row(name, Gtk.Label(label=t("a.ready")), subtitle=p, icon=ICONS["automation"])
             attach_menu(r, [
-                ("Yolu kopyala", lambda p=p: copy_text(p)),
-                ("Şimdi uygula (daemon --once)",
-                 lambda p=p: toast("terminal: sudo litaged --once")),
+                (t("a.copy_path"), lambda p=p: copy_text(p)),
+                (t("a.apply_now"),
+                 lambda p=p: toast(t("a.apply_hint"))),
             ])
             grp.add(r)
         grp.add(Adw.ActionRow(
-            title="TLP ile birlikte kullanım",
-            subtitle="governor/epp preset BOŞ bırakılırsa TLP yönetir, doluysa litaged yönetir."))
+            title=t("a.tlp_title"),
+            subtitle=t("a.tlp_sub")))
         outer.append(grp)
         return page_scroll(outer)
 
@@ -961,11 +966,11 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_start(12)
         outer.set_margin_end(12)
         # görünüm
-        gv = Adw.PreferencesGroup(title="Görünüm")
+        gv = Adw.PreferencesGroup(title=t("s.appearance"))
         cur = theme_mod.load()
         theme_ready = {"ready": False}
-        cr = Adw.ComboRow(title="Tema", model=Gtk.StringList.new(
-            [theme_mod.THEME_LABELS[t] for t in theme_mod.THEMES]))
+        cr = Adw.ComboRow(title=t("s.theme"), model=Gtk.StringList.new(
+            [t(f"th.{x}") for x in theme_mod.THEMES]))
         cr.add_prefix(Gtk.Image.new_from_icon_name(ICONS["display"]))
         try:
             cr.set_selected(theme_mod.THEMES.index(cur))
@@ -978,17 +983,42 @@ def main(argv: list[str] | None = None) -> int:
             name = theme_mod.THEMES[cr.get_selected()]
             theme_mod.save(name)
             theme_mod.apply(name, css_providers=css_providers)
-            toast(f"tema: {theme_mod.THEME_LABELS[name]}")
+            toast(t("s.theme_saved", label=t(f"th.{name}")))
 
         cr.connect("notify::selected", _theme)
         GLib.idle_add(lambda: theme_ready.update(ready=True) or False)
         gv.add(cr)
+        # dil seçimi (yeniden başlatınca etkili olur)
+        try:
+            from litage import i18n as _i18n
+            lang_ready = {"ready": False}
+            lcr = Adw.ComboRow(title=t("s.language"),
+                               subtitle=t("s.language_sub"),
+                               model=Gtk.StringList.new(
+                                   [_i18n.LANG_LABELS[x] for x in _i18n.LANGS]))
+            lcr.add_prefix(Gtk.Image.new_from_icon_name(ICONS["settings"]))
+            try:
+                lcr.set_selected(_i18n.LANGS.index(_i18n.get_lang()))
+            except ValueError:
+                pass
+
+            def _lang(_r, _p):
+                if not lang_ready["ready"]:
+                    return
+                _i18n.set_lang(_i18n.LANGS[lcr.get_selected()])
+                toast(t("s.language_saved"))
+
+            lcr.connect("notify::selected", _lang)
+            GLib.idle_add(lambda: lang_ready.update(ready=True) or False)
+            gv.add(lcr)
+        except ImportError:
+            pass
         outer.append(gv)
         # uygulama
-        grp = Adw.PreferencesGroup(title="Uygulama")
+        grp = Adw.PreferencesGroup(title=t("s.app"))
         ad_path = os.path.expanduser("~/.config/autostart/litage-gui.desktop")
-        sr = Adw.SwitchRow(title="Açılışta başlat",
-                           subtitle="~/.config/autostart (tepsiye küçültülmüş)",
+        sr = Adw.SwitchRow(title=t("s.autostart"),
+                           subtitle=t("s.autostart_sub"),
                            active=os.path.exists(ad_path))
 
         def _autostart(_r, _p):
@@ -1001,15 +1031,15 @@ def main(argv: list[str] | None = None) -> int:
 
         sr.connect("notify::active", _autostart)
         grp.add(sr)
-        grp.add(row("Yapılandırma", Gtk.Label(label="/etc/litage/litaged.conf"),
+        grp.add(row(t("s.config"), Gtk.Label(label="/etc/litage/litaged.conf"),
                     icon=ICONS["settings"]))
         outer.append(grp)
         try:
             from litage import prefs as _prefs
-            gclose = Adw.PreferencesGroup(title="Pencere")
+            gclose = Adw.PreferencesGroup(title=t("s.window"))
             cur_close = _prefs.get_close_action()
-            labels = [_prefs.CLOSE_LABELS["tray"], _prefs.CLOSE_LABELS["quit"]]
-            ccr = Adw.ComboRow(title="Kapat düğmesi",
+            labels = [t("s.close_tray"), t("s.close_quit")]
+            ccr = Adw.ComboRow(title=t("s.close_btn"),
                                 model=Gtk.StringList.new(labels))
             ccr.add_prefix(Gtk.Image.new_from_icon_name(ICONS["settings"]))
             ccr.set_selected(1 if cur_close == "quit" else 0)
@@ -1017,7 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
             def _cc(_r, _p):
                 _prefs.set_close_action(
                     "quit" if ccr.get_selected() == 1 else "tray")
-                toast("kapatma davranışı kaydedildi")
+                toast(t("s.close_saved"))
 
             ccr.connect("notify::selected", _cc)
             gclose.add(ccr)
@@ -1033,19 +1063,19 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_start(12)
         outer.set_margin_end(12)
         d = priv.diagnose()
-        grp = Adw.PreferencesGroup(title="Kurulum durumu",
-                                   description="Yazmalar için hepsi yeşil olmalı")
+        grp = Adw.PreferencesGroup(title=t("y.diag"),
+                                   description=t("y.diag_desc"))
         checks = [
-            ("CLI", " ".join(d["cli"]) if d["cli"] else "bulunamadı",
+            (t("y.cli"), " ".join(d["cli"]) if d["cli"] else t("y.cli_missing"),
              bool(d["cli"]), ICONS["cpu"]),
-            ("pkexec", d["pkexec"] or "yok", bool(d["pkexec"]), ICONS["lock"]),
-            ("Polkit policy", d["policy"] or "kurulu değil — ./install.sh",
+            (t("y.pkexec"), d["pkexec"] or t("y.pkexec_missing"), bool(d["pkexec"]), ICONS["lock"]),
+            (t("y.policy"), d["policy"] or t("y.policy_missing"),
              bool(d["policy"]), ICONS["lock"]),
-            ("udev kuralı", d["udev"] or "kurulu değil — ./install.sh",
+            (t("y.udev"), d["udev"] or t("y.udev_missing"),
              bool(d["udev"]), ICONS["settings"]),
-            ("Polkit agent (kurulu)", d["agent_bin"] or "yok — şifre penceresi çıkmaz",
+            (t("y.agent_bin"), d["agent_bin"] or t("y.agent_bin_missing"),
              bool(d["agent_bin"]), ICONS["system"]),
-            ("Polkit agent (çalışıyor)", "çalışıyor" if d["agent_running"] else "ÇALIŞMIYOR",
+            (t("y.agent_run"), t("y.agent_running") if d["agent_running"] else t("y.agent_down"),
              d["agent_running"], ICONS["system"]),
         ]
         for title, sub, okk, ic in checks:
@@ -1054,14 +1084,14 @@ def main(argv: list[str] | None = None) -> int:
             dot = Gtk.Label(label="●")
             dot.add_css_class("success" if okk else "error")
             r.add_suffix(dot)
-            attach_menu(r, [("Kopyala", lambda sub=sub: copy_text(sub))])
+            attach_menu(r, [(t("y.copy"), lambda sub=sub: copy_text(sub))])
             grp.add(r)
         if d["appimage"]:
-            grp.add(row("AppImage", Gtk.Label(label=d["appimage"]), icon=ICONS["system"]))
+            grp.add(row(t("y.appimage"), Gtk.Label(label=d["appimage"]), icon=ICONS["system"]))
         fix = Adw.ActionRow(
-            title="Tek komutla kur",
-            subtitle="sudo ./install.sh --autostart (policy+udev+agent+menü)")
-        btn = Gtk.Button(label="Komutu kopyala")
+            title=t("y.fix"),
+            subtitle=t("y.fix_sub"))
+        btn = Gtk.Button(label=t("y.fix_copy"))
         btn.add_css_class("suggested-action")
         btn.connect("clicked",
                     lambda _b: copy_text("sudo ./install.sh --autostart"))
@@ -1070,24 +1100,24 @@ def main(argv: list[str] | None = None) -> int:
         # tepsi durumu
         tray_ok = tray_running()
         tray_row = Adw.ActionRow(
-            title="Tepsi simgesi",
-            subtitle="çalışıyor" if tray_ok else "yok — panelde görünmüyorsa başlatın")
+            title=t("y.tray"),
+            subtitle=t("y.tray_running") if tray_ok else t("y.tray_missing"))
         tray_row.add_prefix(Gtk.Image.new_from_icon_name(ICONS["battery"]))
-        tbtn = Gtk.Button(label="Tepsiyi başlat")
-        tbtn.connect("clicked", lambda _b: (ensure_tray(), toast("tepsi başlatıldı")))
+        tbtn = Gtk.Button(label=t("y.tray_start"))
+        tbtn.connect("clicked", lambda _b: (ensure_tray(), toast(t("y.tray_started"))))
         tray_row.add_suffix(tbtn)
         grp.add(tray_row)
         applet_ok, applet_msg = priv.cinnamon_tray_applet()
         if not applet_ok:
-            grp.add(Adw.ActionRow(title="Cinnamon tepsi applet'i", subtitle=applet_msg))
+            grp.add(Adw.ActionRow(title=t("y.applet"), subtitle=applet_msg))
         # şifresiz yazma durumu (udev kuralı işlemiş mi?)
         dw = priv.direct_writable()
         if dw:
             n_ok = sum(1 for v in dw.values() if v)
             dw_row = Adw.ActionRow(
-                title=f"Şifresiz yazma: {n_ok}/{len(dw)}",
-                subtitle="tamamı OK ise şifre sorulmaz" if n_ok == len(dw)
-                         else "sudo ./install.sh + yeniden başlatma gerekir")
+                title=t("y.direct", ok=n_ok, total=len(dw)),
+                subtitle=t("y.direct_ok") if n_ok == len(dw)
+                         else t("y.direct_bad"))
             dw_row.add_prefix(Gtk.Image.new_from_icon_name(
                 ICONS["lock"] if n_ok < len(dw) else ICONS["settings"]))
             dot = Gtk.Label(label="●")
@@ -1109,12 +1139,12 @@ def main(argv: list[str] | None = None) -> int:
             outer.append(g2)
         au = audio.get()
         if au.get("tool"):
-            g3 = Adw.PreferencesGroup(title="Ses")
-            g3.add(row("Ses aracı", Gtk.Label(label=str(au["tool"])), icon=ICONS["mic"]))
+            g3 = Adw.PreferencesGroup(title=t("y.audio"))
+            g3.add(row(t("y.audio_tool"), Gtk.Label(label=str(au["tool"])), icon=ICONS["mic"]))
             outer.append(g3)
         tl = thinklmi.get(cap)
         if tl:
-            g4 = Adw.PreferencesGroup(title="think-lmi (root ile okunur)")
+            g4 = Adw.PreferencesGroup(title=t("y.thinklmi"))
             for k in sorted(tl)[:12]:
                 v = tl[k]
                 cur = v.get("current") if isinstance(v, dict) else v
@@ -1127,10 +1157,10 @@ def main(argv: list[str] | None = None) -> int:
         outer.set_margin_top(16)
         outer.set_margin_start(16)
         outer.set_margin_end(16)
-        grp = Adw.PreferencesGroup(title="Bu makine")
-        grp.add(row("Model", Gtk.Label(label=f"{cap.vendor} {cap.product_version}"),
+        grp = Adw.PreferencesGroup(title=t("h.machine"))
+        grp.add(row(t("h.model"), Gtk.Label(label=f"{cap.vendor} {cap.product_version}"),
                     icon=ICONS["system"]))
-        grp.add(row("BIOS", Gtk.Label(label=cap.bios_version), icon=ICONS["settings"]))
+        grp.add(row(t("h.bios"), Gtk.Label(label=cap.bios_version), icon=ICONS["settings"]))
         grp.add(row("Litage", Gtk.Label(label="0.2.0 · GPL-3.0"), icon=ICONS["about"]))
         outer.append(grp)
         return page_scroll(outer)
@@ -1138,23 +1168,24 @@ def main(argv: list[str] | None = None) -> int:
     # ---------------- pencere ----------------
     # sayfa kayıtları Win dışında tutulur ki yenileme/sağ tık erişebilsin
     ui = {"stack": None, "content": None, "rows": {}, "built": {}, "items": []}
+    _L = lambda k: t(f"nav.{k}")
     ui["items"] = [
-        ("dashboard", "Genel Bakış", ICONS["dashboard"], build_dashboard, None),
-        ("battery", "Pil", ICONS["battery"], build_battery, None),
-        ("keyboard", "Klavye", ICONS["keyboard"], build_keyboard, None),
-        ("fan", "Fan Eğrisi",
+        ("dashboard", _L("dashboard"), ICONS["dashboard"], build_dashboard, None),
+        ("battery", _L("battery"), ICONS["battery"], build_battery, None),
+        ("keyboard", _L("keyboard"), ICONS["keyboard"], build_keyboard, None),
+        ("fan", _L("fan"),
          ICONS["fan"], build_fan,
-         None if cap.has_legion_module else "bu cihazda yok"),
-        ("legion", "Legion",
+         None if cap.has_legion_module else t("f.locked_reason_short")),
+        ("legion", _L("legion"),
          ICONS["legion"], build_legion,
-         None if cap.has_legion_module else "modül yok"),
-        ("dgpu", "Harici GPU",
+         None if cap.has_legion_module else t("l.locked_reason_short")),
+        ("dgpu", _L("dgpu"),
          ICONS["dgpu"], build_dgpu,
-         None if cap.show_dgpu_page else "donanım yok"),
-        ("automation", "Otomasyon", ICONS["automation"], build_automation, None),
-        ("settings", "Ayarlar", ICONS["settings"], None, None),
-        ("system", "Sistem", ICONS["system"], build_system, None),
-        ("about", "Hakkında", ICONS["about"], build_about, None),
+         None if cap.show_dgpu_page else t("g.locked_reason_short")),
+        ("automation", _L("automation"), ICONS["automation"], build_automation, None),
+        ("settings", _L("settings"), ICONS["settings"], None, None),
+        ("system", _L("system"), ICONS["system"], build_system, None),
+        ("about", _L("about"), ICONS["about"], build_about, None),
     ]
 
     def show_page(key: str, rebuild: bool = False):
@@ -1211,7 +1242,7 @@ def main(argv: list[str] | None = None) -> int:
                     ui.pop("win", None)
                     return False
                 _w.set_visible(False)
-                print("[litage-gui] tepsiye küçültüldü")
+                print("[litage-gui] " + t("c.toast_minimized"))
                 return True
 
             self.connect("close-request", _on_close)
@@ -1244,7 +1275,7 @@ def main(argv: list[str] | None = None) -> int:
             nav.set_selection_mode(Gtk.SelectionMode.SINGLE)
             sbox.append(nav)
 
-            content_page = Adw.NavigationPage(title="İçerik")
+            content_page = Adw.NavigationPage(title=t("nav.content"))
             cbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
             cheader = Adw.HeaderBar()
             refresh_btn = Gtk.Button.new_from_icon_name(ICONS["refresh"])
@@ -1256,8 +1287,8 @@ def main(argv: list[str] | None = None) -> int:
                               hexpand=True, vexpand=True)
             cbox.append(stack)
             # Kaydet: başlıkta kompakt (ekran kaplamaz) — bekleyen varsa aktif
-            btn_cancel = Gtk.Button(label="Vazgeç")
-            btn_cancel.set_tooltip_text("Bekleyen değişiklikleri geri al")
+            btn_cancel = Gtk.Button(label=t("c.cancel"))
+            btn_cancel.set_tooltip_text(t("c.cancel_tip"))
             btn_cancel.connect("clicked", lambda _b: save_discard())
             btn_cancel.set_sensitive(False)
             btn_cancel.set_opacity(0.45)
@@ -1266,8 +1297,8 @@ def main(argv: list[str] | None = None) -> int:
             save_count.add_css_class("accent")
             save_count.set_visible(False)
             cheader.pack_end(save_count)
-            btn_save = Gtk.Button(label="Kaydet")
-            btn_save.set_tooltip_text("Bekleyenleri tek şifreyle uygula")
+            btn_save = Gtk.Button(label=t("c.save"))
+            btn_save.set_tooltip_text(t("c.save_tip"))
             btn_save.add_css_class("suggested-action")
             btn_save.connect("clicked", lambda _b: save_apply())
             btn_save.set_sensitive(False)
@@ -1289,7 +1320,7 @@ def main(argv: list[str] | None = None) -> int:
                 # açılmaz ama neden kapalı olduğu söylenir.
                 r.set_tooltip_text(
                     label if not locked
-                    else f"{label}: {locked} — destekli donanımda açılır")
+                    else t("nav.locked_why", label=label, reason=locked))
                 box = Gtk.Box(spacing=10)
                 box.set_margin_top(7)
                 box.set_margin_bottom(7)
@@ -1300,13 +1331,13 @@ def main(argv: list[str] | None = None) -> int:
                 box.append(img)
                 box.append(Gtk.Label(label=label, xalign=0, hexpand=True))
                 if locked:
-                    badge = Gtk.Label(label="YOK")
+                    badge = Gtk.Label(label=t("nav.badge_missing"))
                     badge.add_css_class("dim-label")
                     box.append(badge)
                 r.set_child(box)
                 attach_menu(r, [
-                    ("Sayfaya git", lambda key=key: show_page(key)),
-                    ("Adı kopyala", lambda label=label: copy_text(label)),
+                    (t("c.ctx_goto"), lambda key=key: show_page(key)),
+                    (t("c.ctx_copy_name"), lambda label=label: copy_text(label)),
                 ])
                 nav.append(r)
                 ui["rows"][key] = r
@@ -1339,7 +1370,7 @@ def main(argv: list[str] | None = None) -> int:
                 return
             except OSError:
                 continue
-        toast("tepsi başlatılamadı")
+        toast(t("y.tray_failed"))
 
     def tray_running() -> bool:
         for path in (f"/run/user/{os.getuid()}/litage-tray.lock",
