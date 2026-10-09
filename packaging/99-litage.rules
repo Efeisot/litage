@@ -1,0 +1,10 @@
+# Litage — power/video grubuna şifresiz yazma izni (udev RUN ile).
+# NOT: GROUP=/MODE= atamaları /dev düğümü olmayan sysfs dosyalarına işlemez;
+# bu yüzden litage-udev-fix yardımcısı çağrılır (root, idempotent).
+ACTION=="add", SUBSYSTEM=="platform", KERNEL=="VPC*", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="platform-profile", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="firmware-attributes", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="leds", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="backlight", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="cpu", RUN+="/usr/local/bin/litage-udev-fix"
+ACTION=="add", SUBSYSTEM=="power_supply", RUN+="/usr/local/bin/litage-udev-fix"

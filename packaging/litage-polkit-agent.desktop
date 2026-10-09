@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Litage Polkit Agent
+Comment=Authentication dialogs for Litage (and other apps)
+Exec=litage-polkit-agent
+Icon=auth-sim-symbolic
+Terminal=false
+Type=Application
+Categories=System;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-Cinnamon-Autostart-enabled=true
+X-MATE-Autostart-enabled=true

@@ -1,0 +1,6 @@
+# Yoga 14AKP10 varsayılan presetleri — AC/pil x profil
+platform_profile: low-power
+governor: powersave
+epp: balance_performance
+fan_mode: 1
+kbd_backlight: 0

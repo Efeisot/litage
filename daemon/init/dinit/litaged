@@ -1,0 +1,5 @@
+type = scripted
+command = /usr/local/bin/litaged
+restart = true
+smooth-recovery = true
+logfile = /var/log/litaged.log

@@ -1,0 +1,5 @@
+platform_profile: low-power
+governor: powersave
+epp: balance_performance
+fan_mode: 1
+kbd_backlight: 1

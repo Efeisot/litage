@@ -1,0 +1,47 @@
+# Maintainer: Litage contributors
+pkgname=litage-git
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Lenovo Vantage alternative for Linux — distro & init agnostic (Yoga/IdeaPad/Legion/ThinkPad)"
+arch=('any')
+url="https://github.com/example/litage"
+license=('GPL3')
+depends=('python' 'python-gobject' 'python-yaml' 'gtk4' 'libadwaita')
+optdepends=('upower: battery details'
+            'rfkill: wifi/bt toggle'
+            'xorg-xrandr: display modes'
+            'tlp: power profiles + charge thresholds (complementary)'
+            'libayatana-appindicator: tray menu on Cinnamon')
+provides=('litage')
+conflicts=('litage')
+source=('git+file:///home/efeisot/Workspace/ltport/Litage')
+sha256sums=('SKIP')
+
+package() {
+  cd "$srcdir/Litage"
+  install -Dm755 install.sh "$pkgdir/usr/share/litage/install.sh"
+  install -dm755 "$pkgdir/usr/lib/litage"
+  cp -r litage "$pkgdir/usr/lib/litage/"
+  # shims (PYTHONPATH + -m, gömülü yola değil)
+  install -dm755 "$pkgdir/usr/bin"
+  printf '#!/bin/sh\nexec env PYTHONPATH=/usr/lib/litage python3 -m litage.cli "$@"\n' > "$pkgdir/usr/bin/litage"
+  printf '#!/bin/sh\nexec env PYTHONPATH=/usr/lib/litage python3 -m litage.gui "$@"\n' > "$pkgdir/usr/bin/litage-gui"
+  printf '#!/bin/sh\nexec env PYTHONPATH=/usr/lib/litage python3 -m litage.daemon "$@"\n' > "$pkgdir/usr/bin/litaged"
+  chmod +x "$pkgdir/usr/bin/litage" "$pkgdir/usr/bin/litage-gui" "$pkgdir/usr/bin/litaged"
+  install -Dm644 daemon/litaged.conf "$pkgdir/etc/litage/litaged.conf"
+  install -dm755 "$pkgdir/etc/litage/profiles"
+  install -m644 daemon/profiles/*.yaml "$pkgdir/etc/litage/profiles/"
+  # init sistemleri (6'sı da pakette)
+  install -Dm644 daemon/init/systemd/litaged.service "$pkgdir/usr/lib/systemd/system/litaged.service"
+  install -Dm755 daemon/init/openrc/litaged "$pkgdir/etc/init.d/litaged"
+  install -Dm755 daemon/init/runit/litaged/run "$pkgdir/etc/sv/litaged/run"
+  install -Dm644 daemon/init/dinit/litaged "$pkgdir/etc/dinit.d/litaged"
+  install -Dm755 daemon/init/s6/litaged/run "$pkgdir/etc/s6/sv/litaged/run"
+  install -Dm644 daemon/init/s6/litaged/type "$pkgdir/etc/s6/sv/litaged/type"
+  install -Dm755 daemon/init/sysvinit/litaged "$pkgdir/etc/init.d/litaged.sysv"
+  # menü + ikon + policy + udev
+  install -Dm644 packaging/dev.litage.app.desktop "$pkgdir/usr/share/applications/dev.litage.app.desktop"
+  install -Dm644 packaging/dev.litage.app.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/dev.litage.app.svg"
+  install -Dm644 packaging/dev.litage.policy "$pkgdir/usr/share/polkit-1/actions/dev.litage.policy"
+  install -Dm644 packaging/99-litage.rules "$pkgdir/usr/lib/udev/rules.d/99-litage.rules"
+}

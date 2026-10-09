@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Litage (tray)
+Comment=Lenovo power manager — start minimized in tray
+Exec=litage-gui --minimized
+Icon=dev.litage.app
+Terminal=false
+Type=Application
+Categories=System;Settings;
+X-GNOME-Autostart-enabled=true
+X-Cinnamon-Autostart-enabled=true
+NoDisplay=false

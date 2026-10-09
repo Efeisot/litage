@@ -1,0 +1,5 @@
+platform_profile: performance
+governor: performance
+epp: performance
+fan_mode: 2
+kbd_backlight: 1

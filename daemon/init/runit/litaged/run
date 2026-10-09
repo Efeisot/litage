@@ -1,0 +1,3 @@
+#!/bin/sh
+# Litage daemon — runit service
+exec /usr/local/bin/litaged

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Litage
+Comment=Lenovo Vantage alternative for Linux
+Exec=litage-gui
+Icon=computer-laptop
+Terminal=false
+Type=Application
+Categories=System;Settings;HardwareSettings;
+Keywords=lenovo;vantage;legion;yoga;power;battery;

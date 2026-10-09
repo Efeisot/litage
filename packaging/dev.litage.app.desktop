@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Litage
+GenericName=Lenovo Power Manager
+Comment=Lenovo Vantage alternative for Linux (Yoga/IdeaPad/Legion/ThinkPad)
+Exec=litage-gui
+Icon=dev.litage.app
+Terminal=false
+Type=Application
+Categories=System;Settings;HardwareSettings;
+Keywords=lenovo;vantage;legion;yoga;ideapad;thinkpad;power;battery;fan;tlp;
+StartupNotify=true
+StartupWMClass=litage-gui

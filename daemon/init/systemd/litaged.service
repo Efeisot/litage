@@ -1,0 +1,13 @@
+[Unit]
+Description=litaged — Lenovo power automation (distro-agnostic)
+After=multi-user.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/litaged
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "litage"
+version = "0.1.0"
+description = "Lenovo Vantage alternative for Linux — distro & init agnostic (Yoga/IdeaPad/Legion)"
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.9"
+dependencies = ["pygobject>=3.42", "pyyaml>=6.0"]
+authors = [{ name = "Litage contributors" }]
+
+[project.optional-dependencies]
+gui = []
+test = ["pytest>=7.0"]
+
+[project.scripts]
+litage = "litage.cli:main"
+litage-gui = "litage.gui:main"
+litaged = "litage.daemon:main"
+litage-tray = "litage.tray:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["litage*"]
+
+[tool.black]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+litage = ["icons/*.svg"]

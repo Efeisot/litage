@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+# Litage daemon — OpenRC (Artix/Gentoo default)
+name="litaged"
+description="Lenovo power automation daemon"
+command="/usr/local/bin/litaged"
+command_args=""
+pidfile="/run/litaged.pid"
+command_background="yes"
+
+depend() {
+    need localmount
+    after bootmisc
+}
